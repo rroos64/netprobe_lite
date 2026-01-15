@@ -157,4 +157,4 @@ cython_debug/
 # Log files
 
 # local documentation files
-./docs
+docs/
