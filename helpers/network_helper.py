@@ -3,7 +3,6 @@ import subprocess
 import json
 from threading import Thread
 import dns.resolver
-import speedtest
 
 
 class NetworkCollector(object): # Main network collection class
@@ -126,10 +125,25 @@ class Netprobe_Speedtest(object): # Speed test class
 
     def netprobe_speedtest(self):
 
-        s = speedtest.Speedtest()
-        s.get_best_server()
-        download = s.download()
-        upload = s.upload()
+        completed = subprocess.run(
+            [
+                "speedtest",
+                "--format=json",
+                "--accept-license",
+                "--accept-gdpr"
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=180
+        )
+
+        speedtest_result = json.loads(completed.stdout)
+
+        # Ookla's official CLI returns bandwidth in bytes/second.
+        # Prometheus/Grafana expects this metric in bits/second.
+        download = speedtest_result["download"]["bandwidth"] * 8
+        upload = speedtest_result["upload"]["bandwidth"] * 8
 
         self.speedtest_stats = {
             "download": download,

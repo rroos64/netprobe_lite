@@ -37,8 +37,9 @@ services:
   speedtest:
     restart: always
     container_name: netprobe-speedtest
-    image: "plaintextpackets/netprobe:latest"
-    pull_policy: always
+    build:
+      context: .
+    image: "netprobe:local"
     volumes:
       - .:/netprobe_lite
     environment:
