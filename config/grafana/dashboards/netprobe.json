@@ -318,7 +318,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## Internet Quality Score\nThe Internet Quality Score is a metric designed to provide you an idea of your internet quality at any given time. The metric ranges from 0 and 100, and is comprised of four metrics (with associated weights):\n\n- Packet loss (60%)\n- Latency (15%)\n- Jitter (20%)\n- DNS Response Times (5%)\n",
+        "content": "## Internet Quality Score\nThe Internet Quality Score ranges from 0 to 100 and is calculated from weighted network quality measurements.\n\n### Speedtest scoring disabled\nThis is the default configuration:\n\n- Packet loss: 60%\n- Latency: 15%\n- Jitter: 20%\n- DNS response time: 5%\n- Speedtest: 0%\n\n### Speedtest scoring enabled\nIf `SPEEDTEST_SCORE_ENABLED=True`, reserve 10% for speedtest and reduce the existing components proportionally so their relative balance stays the same:\n\n- Packet loss: 54%\n- Latency: 13.5%\n- Jitter: 18%\n- DNS response time: 4.5%\n- Download speed: 7%\n- Upload speed: 3%\n\nSpeed is compared against the configured expected line speed, currently 500 Mbps down / 250 Mbps up.\n",
         "mode": "markdown"
       },
       "pluginVersion": "10.2.2",
@@ -415,7 +415,7 @@
         "h": 9,
         "w": 5,
         "x": 0,
-        "y": 9
+        "y": 18
       },
       "id": 25,
       "options": {
@@ -591,7 +591,7 @@
         "h": 9,
         "w": 14,
         "x": 5,
-        "y": 9
+        "y": 18
       },
       "id": 36,
       "options": {
@@ -654,7 +654,7 @@
         "h": 9,
         "w": 5,
         "x": 19,
-        "y": 9
+        "y": 18
       },
       "id": 40,
       "options": {
@@ -758,7 +758,7 @@
         "h": 9,
         "w": 5,
         "x": 0,
-        "y": 18
+        "y": 27
       },
       "id": 23,
       "options": {
@@ -932,7 +932,7 @@
         "h": 9,
         "w": 14,
         "x": 5,
-        "y": 18
+        "y": 27
       },
       "id": 2,
       "options": {
@@ -996,7 +996,7 @@
         "h": 9,
         "w": 5,
         "x": 19,
-        "y": 18
+        "y": 27
       },
       "id": 41,
       "options": {
@@ -1100,7 +1100,7 @@
         "h": 9,
         "w": 5,
         "x": 0,
-        "y": 27
+        "y": 36
       },
       "id": 28,
       "options": {
@@ -1275,7 +1275,7 @@
         "h": 9,
         "w": 14,
         "x": 5,
-        "y": 27
+        "y": 36
       },
       "id": 27,
       "options": {
@@ -1337,7 +1337,7 @@
         "h": 9,
         "w": 5,
         "x": 19,
-        "y": 27
+        "y": 36
       },
       "id": 42,
       "options": {
@@ -1443,7 +1443,7 @@
         "h": 9,
         "w": 5,
         "x": 0,
-        "y": 36
+        "y": 45
       },
       "id": 33,
       "options": {
@@ -1547,7 +1547,7 @@
         "h": 9,
         "w": 14,
         "x": 5,
-        "y": 36
+        "y": 45
       },
       "id": 32,
       "options": {
@@ -1593,7 +1593,7 @@
         "h": 9,
         "w": 5,
         "x": 19,
-        "y": 36
+        "y": 45
       },
       "id": 43,
       "options": {
@@ -1672,26 +1672,87 @@
           },
           "decimals": 0,
           "mappings": [],
-          "max": 120,
+          "max": 500000000,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 125000000
               }
             ]
           },
           "unit": "bps"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Download"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 250000000
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "max",
+                "value": 500000000
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Upload"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 125000000
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "max",
+                "value": 250000000
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
         "w": 5,
         "x": 0,
-        "y": 45
+        "y": 9
       },
       "id": 44,
       "options": {
@@ -1813,7 +1874,7 @@
         "h": 9,
         "w": 14,
         "x": 5,
-        "y": 45
+        "y": 9
       },
       "id": 45,
       "options": {
@@ -1859,7 +1920,7 @@
         "h": 9,
         "w": 5,
         "x": 19,
-        "y": 45
+        "y": 9
       },
       "id": 46,
       "options": {
@@ -1868,7 +1929,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "## Internet Bandwidth\nIf you don't see any data you need to explicitly enable the test in the .env file configuration.\n\nBandwidth is the maximum amount of data that can travel across your internet connection at a given time. It's measured in megabits per second (Mbps), similar to how water flow is measured. Less bandwidth than what you paid for can be caused by:\n\n- Other clients down-/uploading data\n- Faulty internal hardware (including cabling or modem)\n- Faulty ISP hardware\n- ISP capacity problems",
+        "content": "## Internet Bandwidth\nIf you do not see any data you need to explicitly enable the test in the .env file configuration.\n\nThis dashboard is configured for a 500 Mbps download / 250 Mbps upload line. Speedtest values turn red when they fall below 50% of the expected line speed:\n\n- Download warning below 250 Mbps\n- Upload warning below 125 Mbps\n\nBandwidth is the maximum amount of data that can travel across your internet connection at a given time. Less bandwidth than expected can be caused by:\n\n- Other clients down-/uploading data\n- Faulty internal hardware, including cabling or modem\n- Faulty ISP hardware\n- ISP capacity problems",
         "mode": "markdown"
       },
       "pluginVersion": "10.2.2",

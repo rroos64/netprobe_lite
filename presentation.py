@@ -38,6 +38,10 @@ class CustomCollector(object):
         else:
             return
 
+        if not stats_netprobe.get('stats'):
+            logger.warning("No network stats available for presentation")
+            return
+
         g = GaugeMetricFamily("Network_Stats", 'Network statistics for latency and loss from the probe to the destination', labels=['type','target'])
 
         total_latency = 0 # Calculate these in presentation rather than prom to reduce cardinality
@@ -67,6 +71,7 @@ class CustomCollector(object):
         yield g
 
         h = GaugeMetricFamily("DNS_Stats", 'DNS performance statistics for various DNS servers', labels=['server'])
+        my_dns_latency = 0
 
         for item in stats_netprobe['dns_stats']:
             h.add_metric([item['nameserver']],item['latency'])
@@ -79,6 +84,8 @@ class CustomCollector(object):
         # Retrieve Speedtest data
 
         results_speedtest = cache.redis_read('speedtest') # Get the latest results from Redis
+        stats_speedtest = None
+        speed_ratios = {}
 
         if results_speedtest: # Speed test is optional
             stats_speedtest = json.loads(json.loads(results_speedtest))
@@ -91,12 +98,45 @@ class CustomCollector(object):
         
             yield s
 
+            speed_stats = stats_speedtest.get('speed_stats', {})
+            download_bps = speed_stats.get('download')
+            upload_bps = speed_stats.get('upload')
+
+            if Config_Presentation.expected_down_mbps > 0 and download_bps:
+                speed_ratios['download'] = min((download_bps / 1000000) / Config_Presentation.expected_down_mbps, 1.0)
+
+            if Config_Presentation.expected_up_mbps > 0 and upload_bps:
+                speed_ratios['upload'] = min((upload_bps / 1000000) / Config_Presentation.expected_up_mbps, 1.0)
+
+            if speed_ratios:
+                r = GaugeMetricFamily("Speed_Ratio", 'Speedtest result as a ratio of expected line speed', labels=['direction'])
+                status = GaugeMetricFamily("Speed_Status", 'Speedtest warning status where 1 is OK and 0 is below warning threshold', labels=['direction'])
+                warning = GaugeMetricFamily("Speed_Warning_Threshold", 'Configured speedtest warning ratio threshold', labels=['direction'])
+
+                for direction, ratio in speed_ratios.items():
+                    r.add_metric([direction],ratio)
+                    status.add_metric([direction],1 if ratio >= Config_Presentation.speedtest_warning_ratio else 0)
+                    warning.add_metric([direction],Config_Presentation.speedtest_warning_ratio)
+
+                yield r
+                yield status
+                yield warning
+
         # Calculate overall health score
 
         weight_loss = Config_Presentation.weight_loss # Loss is 60% of score
         weight_latency = Config_Presentation.weight_latency # Latency is 15% of score
         weight_jitter = Config_Presentation.weight_jitter # Jitter is 20% of score
         weight_dns_latency = Config_Presentation.weight_dns_latency # DNS latency is 0.05 of score
+        weight_speed_down = Config_Presentation.weight_speed_down
+        weight_speed_up = Config_Presentation.weight_speed_up
+
+        total_weight = weight_loss + weight_latency + weight_jitter + weight_dns_latency
+        if Config_Presentation.speedtest_score_enabled:
+            total_weight += weight_speed_down + weight_speed_up
+
+        if total_weight > 1.0:
+            logger.warning(f"Health score weights total {total_weight}, which is greater than 1.0")
 
         threshold_loss = Config_Presentation.threshold_loss # 5% loss threshold as max
         threshold_latency = Config_Presentation.threshold_latency # 100ms latency threshold as max
@@ -124,9 +164,41 @@ class CustomCollector(object):
         else:
             eval_dns_latency = my_dns_latency / threshold_dns_latency
 
+        eval_speed_down = 0
+        eval_speed_up = 0
+        speed_score_active = False
+
+        if Config_Presentation.speedtest_score_enabled:
+            if not stats_speedtest:
+                logger.warning("Speedtest score enabled but no speedtest data is available")
+            elif Config_Presentation.expected_down_mbps <= 0 or Config_Presentation.expected_up_mbps <= 0:
+                logger.warning("Speedtest score enabled but expected speeds are not configured")
+            else:
+                speed_stats = stats_speedtest.get('speed_stats', {})
+                download_bps = speed_stats.get('download')
+                upload_bps = speed_stats.get('upload')
+
+                if download_bps and upload_bps:
+                    down_mbps = download_bps / 1000000
+                    up_mbps = upload_bps / 1000000
+
+                    down_ratio = min(down_mbps / Config_Presentation.expected_down_mbps, 1.0)
+                    up_ratio = min(up_mbps / Config_Presentation.expected_up_mbps, 1.0)
+
+                    eval_speed_down = 1.0 - down_ratio
+                    eval_speed_up = 1.0 - up_ratio
+                    speed_score_active = True
+                else:
+                    logger.warning("Speedtest score enabled but download/upload values are missing")
+
         # Master scoring function
 
         score = 1 - weight_loss * (eval_loss) - weight_jitter * (eval_jitter) - weight_latency * (eval_latency) - weight_dns_latency * (eval_dns_latency)
+
+        if speed_score_active:
+            score = score - weight_speed_down * (eval_speed_down) - weight_speed_up * (eval_speed_up)
+
+        score = max(0, min(1, score))
 
         i = GaugeMetricFamily("Health_Stats", 'Overall internet health function')
         i.add_metric(['health'],score)

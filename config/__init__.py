@@ -49,6 +49,13 @@ class Config_Presentation():
     weight_latency = float(os.getenv('weight_latency'))
     weight_jitter = float(os.getenv('weight_jitter'))
     weight_dns_latency = float(os.getenv('weight_dns_latency'))
+    weight_speed_down = float(os.getenv('weight_speed_down', '0'))
+    weight_speed_up = float(os.getenv('weight_speed_up', '0'))
+
+    speedtest_score_enabled = os.getenv("SPEEDTEST_SCORE_ENABLED", 'False').lower() in ('true', '1', 't')
+    expected_down_mbps = float(os.getenv('EXPECTED_DOWN_MBPS', '0'))
+    expected_up_mbps = float(os.getenv('EXPECTED_UP_MBPS', '0'))
+    speedtest_warning_ratio = float(os.getenv('SPEEDTEST_WARNING_RATIO', '0.50'))
 
     threshold_loss = int(os.getenv('threshold_loss'))
     threshold_latency = int(os.getenv('threshold_latency'))
