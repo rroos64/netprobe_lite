@@ -249,7 +249,35 @@
           },
           "unit": "percent"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
@@ -266,7 +294,7 @@
           "showLegend": false
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -287,6 +315,22 @@
           "range": true,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "expr": "predict_linear(Health_Stats[$__range], 0) * 100",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "linear trend",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
         }
       ],
       "thresholds": [
@@ -298,7 +342,8 @@
         }
       ],
       "transparent": true,
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Internet quality score with a linear trendline over the selected dashboard range."
     },
     {
       "datasource": {
@@ -1868,7 +1913,28 @@
           },
           "unit": "bps"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 9,
@@ -1885,7 +1951,7 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -1906,10 +1972,27 @@
           "range": true,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "expr": "predict_linear(Speed_Stats[$__range], 0)",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "{{direction}} linear trend",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
         }
       ],
       "transparent": true,
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Raw speedtest bandwidth with a linear trendline over the selected dashboard range."
     },
     {
       "datasource": {
