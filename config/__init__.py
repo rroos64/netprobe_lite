@@ -18,6 +18,7 @@ class Config_Netprobe():
     dns_test_site = os.getenv('DNS_TEST_SITE')
     speedtest_enabled = os.getenv("SPEEDTEST_ENABLED", 'False').lower() in ('true', '1', 't')
     speedtest_interval = int(os.getenv('SPEEDTEST_INTERVAL'))
+    speedtest_provider = os.getenv('SPEEDTEST_PROVIDER', 'cloudflare').lower()
 
     DNS_NAMESERVER_1 = os.getenv('DNS_NAMESERVER_1')
     DNS_NAMESERVER_1_IP = os.getenv('DNS_NAMESERVER_1_IP')

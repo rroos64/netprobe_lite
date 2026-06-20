@@ -1,8 +1,11 @@
 # Network tests
 import subprocess
 import json
+import os
+import time
 from threading import Thread
 import dns.resolver
+import requests
 
 
 class NetworkCollector(object): # Main network collection class
@@ -120,8 +123,9 @@ class NetworkCollector(object): # Main network collection class
 
 class Netprobe_Speedtest(object): # Speed test class
 
-    def __init__(self):
+    def __init__(self,provider="cloudflare"):
         self.speedtest_stats = {"download": None, "upload": None}
+        self.provider = provider
 
     def get_closest_servers(self):
 
@@ -143,7 +147,7 @@ class Netprobe_Speedtest(object): # Speed test class
 
         return [server["id"] for server in server_list["servers"]]
 
-    def netprobe_speedtest(self):
+    def ookla_speedtest(self):
 
         last_error = None
 
@@ -188,10 +192,47 @@ class Netprobe_Speedtest(object): # Speed test class
 
         raise last_error
 
+    def cloudflare_speedtest(self):
+
+        # Cloudflare's speed test runs entirely over HTTPS (no raw-socket
+        # multi-connection protocol like Ookla's), avoiding the port 8080
+        # multi-connection failures seen against regional Ookla servers.
+        download_bytes = 25_000_000
+        upload_bytes = 10_000_000
+
+        start = time.time()
+        response = requests.get(
+            f"https://speed.cloudflare.com/__down?bytes={download_bytes}",
+            timeout=30
+        )
+        response.raise_for_status()
+        elapsed = time.time() - start
+        download_bandwidth = len(response.content) / elapsed # bytes/sec
+
+        payload = os.urandom(upload_bytes)
+        start = time.time()
+        response = requests.post(
+            "https://speed.cloudflare.com/__up",
+            data=payload,
+            timeout=30
+        )
+        response.raise_for_status()
+        elapsed = time.time() - start
+        upload_bandwidth = upload_bytes / elapsed # bytes/sec
+
+        self.speedtest_stats = {
+            "download": download_bandwidth * 8,
+            "upload": upload_bandwidth * 8
+        }
+
     def collect(self):
 
         self.speedtest_stats = {"download": None, "upload": None}
-        self.netprobe_speedtest()
+
+        if self.provider == "cloudflare":
+            self.cloudflare_speedtest()
+        else:
+            self.ookla_speedtest()
 
         results = json.dumps({
             "speed_stats":self.speedtest_stats
