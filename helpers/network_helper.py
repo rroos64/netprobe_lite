@@ -120,41 +120,73 @@ class NetworkCollector(object): # Main network collection class
 
 class Netprobe_Speedtest(object): # Speed test class
 
-    def __init__(self,server_id=None):
+    def __init__(self):
         self.speedtest_stats = {"download": None, "upload": None}
-        self.server_id = server_id
 
-    def netprobe_speedtest(self):
-
-        command = [
-            "speedtest",
-            "--format=json",
-            "--accept-license",
-            "--accept-gdpr"
-        ]
-
-        if self.server_id:
-            command.append(f"--server-id={self.server_id}")
+    def get_closest_servers(self):
 
         completed = subprocess.run(
-            command,
+            [
+                "speedtest",
+                "--servers",
+                "--format=json",
+                "--accept-license",
+                "--accept-gdpr"
+            ],
             capture_output=True,
             text=True,
             check=True,
-            timeout=180
+            timeout=30
         )
 
-        speedtest_result = json.loads(completed.stdout)
+        server_list = json.loads(completed.stdout)
 
-        # Ookla's official CLI returns bandwidth in bytes/second.
-        # Prometheus/Grafana expects this metric in bits/second.
-        download = speedtest_result["download"]["bandwidth"] * 8
-        upload = speedtest_result["upload"]["bandwidth"] * 8
+        return [server["id"] for server in server_list["servers"]]
 
-        self.speedtest_stats = {
-            "download": download,
-            "upload": upload
-        }
+    def netprobe_speedtest(self):
+
+        last_error = None
+
+        # The nearest Ookla server is often a small regional ISP node that
+        # intermittently fails the multi-connection throughput stage. Retry
+        # immediately against the next-closest server instead of waiting
+        # for the next probe interval.
+        for server_id in self.get_closest_servers():
+
+            try:
+                completed = subprocess.run(
+                    [
+                        "speedtest",
+                        "--format=json",
+                        "--accept-license",
+                        "--accept-gdpr",
+                        f"--server-id={server_id}"
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=60
+                )
+
+                speedtest_result = json.loads(completed.stdout)
+
+                # Ookla's official CLI returns bandwidth in bytes/second.
+                # Prometheus/Grafana expects this metric in bits/second.
+                download = speedtest_result["download"]["bandwidth"] * 8
+                upload = speedtest_result["upload"]["bandwidth"] * 8
+
+                self.speedtest_stats = {
+                    "download": download,
+                    "upload": upload
+                }
+
+                return
+
+            except Exception as e:
+                last_error = e
+                continue
+
+        raise last_error
 
     def collect(self):
 

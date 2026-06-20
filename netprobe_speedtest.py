@@ -14,9 +14,8 @@ if __name__ == '__main__':
 
     speedtest_enabled = Config_Netprobe.speedtest_enabled
     speedtest_interval = Config_Netprobe.speedtest_interval
-    speedtest_server_id = Config_Netprobe.speedtest_server_id
 
-    collector = Netprobe_Speedtest(speedtest_server_id)
+    collector = Netprobe_Speedtest()
 
     # Logging Config
 
