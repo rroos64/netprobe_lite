@@ -4,6 +4,7 @@ import json
 import os
 import time
 from threading import Thread
+from concurrent.futures import ThreadPoolExecutor
 import dns.resolver
 import requests
 
@@ -192,33 +193,60 @@ class Netprobe_Speedtest(object): # Speed test class
 
         raise last_error
 
+    def cloudflare_download(self,size):
+
+        response = requests.get(
+            f"https://speed.cloudflare.com/__down?bytes={size}",
+            timeout=30
+        )
+        response.raise_for_status()
+
+        return len(response.content)
+
+    def cloudflare_upload(self,size):
+
+        response = requests.post(
+            "https://speed.cloudflare.com/__up",
+            data=os.urandom(size),
+            timeout=30
+        )
+        response.raise_for_status()
+
+        return size
+
     def cloudflare_speedtest(self):
 
         # Cloudflare's speed test runs entirely over HTTPS (no raw-socket
         # multi-connection protocol like Ookla's), avoiding the port 8080
         # multi-connection failures seen against regional Ookla servers.
+        #
+        # A single cold connection measures far below real line speed,
+        # since TLS handshake and TCP slow-start eat into the timed
+        # window. Run an untimed warm-up round first, then measure
+        # several parallel streams (matching how speedtest websites
+        # saturate high-bandwidth links) and sum their throughput.
+        streams = 4
+        warmup_bytes = 1_000_000
         download_bytes = 25_000_000
         upload_bytes = 10_000_000
 
-        start = time.time()
-        response = requests.get(
-            f"https://speed.cloudflare.com/__down?bytes={download_bytes}",
-            timeout=30
-        )
-        response.raise_for_status()
-        elapsed = time.time() - start
-        download_bandwidth = len(response.content) / elapsed # bytes/sec
+        with ThreadPoolExecutor(max_workers=streams) as executor:
+            list(executor.map(self.cloudflare_download,[warmup_bytes]*streams))
 
-        payload = os.urandom(upload_bytes)
         start = time.time()
-        response = requests.post(
-            "https://speed.cloudflare.com/__up",
-            data=payload,
-            timeout=30
-        )
-        response.raise_for_status()
+        with ThreadPoolExecutor(max_workers=streams) as executor:
+            sizes = list(executor.map(self.cloudflare_download,[download_bytes]*streams))
         elapsed = time.time() - start
-        upload_bandwidth = upload_bytes / elapsed # bytes/sec
+        download_bandwidth = sum(sizes) / elapsed # bytes/sec
+
+        with ThreadPoolExecutor(max_workers=streams) as executor:
+            list(executor.map(self.cloudflare_upload,[warmup_bytes]*streams))
+
+        start = time.time()
+        with ThreadPoolExecutor(max_workers=streams) as executor:
+            sizes = list(executor.map(self.cloudflare_upload,[upload_bytes]*streams))
+        elapsed = time.time() - start
+        upload_bandwidth = sum(sizes) / elapsed # bytes/sec
 
         self.speedtest_stats = {
             "download": download_bandwidth * 8,
