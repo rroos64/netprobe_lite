@@ -120,18 +120,24 @@ class NetworkCollector(object): # Main network collection class
 
 class Netprobe_Speedtest(object): # Speed test class
 
-    def __init__(self):
+    def __init__(self,server_id=None):
         self.speedtest_stats = {"download": None, "upload": None}
+        self.server_id = server_id
 
     def netprobe_speedtest(self):
 
+        command = [
+            "speedtest",
+            "--format=json",
+            "--accept-license",
+            "--accept-gdpr"
+        ]
+
+        if self.server_id:
+            command.append(f"--server-id={self.server_id}")
+
         completed = subprocess.run(
-            [
-                "speedtest",
-                "--format=json",
-                "--accept-license",
-                "--accept-gdpr"
-            ],
+            command,
             capture_output=True,
             text=True,
             check=True,

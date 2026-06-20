@@ -13,6 +13,7 @@ services:
     image: "redis:latest"
     volumes:
       - ./config/redis/redis.conf:/etc/redis/redis.conf
+      - redis_data:/data
     ports:
       - "127.0.0.1:6379:6379"
     networks:
@@ -90,4 +91,5 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  redis_data:
   
